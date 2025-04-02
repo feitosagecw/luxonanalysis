@@ -1,0 +1,12 @@
+streamlit
+google-cloud-bigquery
+google-auth
+gspread
+google-api-python-client
+oauth2client
+gspread_dataframe
+db-dtypes
+matplotlib
+networkx
+pyvis
+plotly
