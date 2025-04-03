@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 streamlit==1.44.1
+=======
+streamlit
+>>>>>>> 67dae1cb794d7c58f09a2a862caa40caabba2afa
 google-cloud-bigquery
 google-auth
 gspread
