@@ -60,7 +60,7 @@ st.markdown("""
     
     /* Estilo para a barra de progresso */
     div[data-testid="stProgress"] > div > div {
-        background-color: #000000 !important;
+        background-color: #1e293b !important;
         border-radius: 4px !important;
     }
     
@@ -85,11 +85,22 @@ st.markdown("""
         background-color: #ffffff !important;
         color: #1e293b !important;
         border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
+        font-size: 0.9em !important;
+        font-family: 'Inter', sans-serif !important;
+        transition: all 0.3s ease !important;
     }
     
     [data-testid="stTextInput"] input:focus {
         border-color: #3b82f6 !important;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+        outline: none !important;
+    }
+    
+    [data-testid="stTextInput"] input::placeholder {
+        color: #94a3b8 !important;
+        font-size: 0.9em !important;
     }
     
     /* Estilo para o expander no sidebar */
@@ -108,11 +119,13 @@ st.markdown("""
         background: linear-gradient(135deg, #1e293b, #334155) !important;
         color: white !important;
         border: none !important;
-        padding: 0.75rem 1.5rem !important;
-        border-radius: 0.5rem !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 8px !important;
         font-weight: 600 !important;
+        font-size: 0.8em !important;
         transition: all 0.3s ease !important;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+        letter-spacing: 0.5px !important;
     }
     
     .stButton > button:hover {
@@ -354,6 +367,35 @@ st.markdown("""
     .js-plotly-plot {
         border-radius: 12px !important;
     }
+
+    /* Estilo para os elementos não selecionados no multiselect */
+    .stMultiSelect [data-baseweb="select"] {
+        font-size: 0.65em !important;
+    }
+    
+    /* Estilo para as opções do dropdown */
+    .stMultiSelect [data-baseweb="option"] {
+        font-size: 0.65em !important;
+    }
+    
+    /* Estilo para os elementos selecionados no multiselect */
+    .stMultiSelect [data-baseweb="tag"] {
+        background-color: #1e293b !important;
+        color: white !important;
+        border-radius: 6px !important;
+        padding: 4px 8px !important;
+        margin: 2px !important;
+        font-size: 0.75em !important;
+    }
+
+    .stMultiSelect [data-baseweb="tag"]:hover {
+        background-color: #334155 !important;
+    }
+
+    /* Estilo para o botão de remover do tag */
+    .stMultiSelect [data-baseweb="tag"] button {
+        color: white !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -460,7 +502,7 @@ with st.sidebar:
         <div style='text-align: center; margin-bottom: 30px;'>
             <h1 style='color: #1e293b; font-size: 2.2em;'>
                 <span style='font-weight: 800;'>LUX</span> 
-                <span style='font-weight: 400; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);'>ANALYSIS</span>
+                <span style='font-weight: 400; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); color: #991b1b;'>ANALYSIS</span>
             </h1>
         </div>
     """, unsafe_allow_html=True)
@@ -512,14 +554,8 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    # Separador visual
-    st.markdown("---")
-    
     # Adicionar espaçamento antes do botão
-    st.markdown("<div style='height: 60px;'></div>", unsafe_allow_html=True)
-    
-    # Adicionar um separador visual
-    st.markdown("<hr style='border: 1px solid rgba(179, 163, 17, 0.1); margin: 20px 0;'>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
     
     # Botão de análise no sidebar
     if st.button("Analisar", key="analyze_button", use_container_width=True) or st.session_state.get("should_analyze", False):
