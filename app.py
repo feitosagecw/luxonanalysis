@@ -46,6 +46,7 @@ st.markdown("""
         overflow: hidden;
         height: 100vh;
         position: fixed;
+        width: 350px !important; /* Aumentado de 300px para 350px */
     }
     
     /* Remover barra de rolagem do sidebar */
@@ -577,7 +578,19 @@ with st.sidebar:
         """, unsafe_allow_html=True)
 
 # Título com ícone e subtítulo mais informativo
-st.markdown("<div class='subheader'>Bem vindo! </div>", unsafe_allow_html=True)
+# Obtém a hora atual
+hora_atual = datetime.now().hour
+
+# Define a saudação conforme a hora
+if hora_atual < 12:
+    saudacao = "Bom dia!"
+elif hora_atual < 18:
+    saudacao = "Boa tarde!"
+else:
+    saudacao = "Boa noite!"
+
+# Exibe a saudação usando markdown
+st.markdown(f"<div class='subheader'>{saudacao}</div>", unsafe_allow_html=True)
 
 # Adicionar uma descrição mais detalhada
 st.markdown("""
