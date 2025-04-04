@@ -40,14 +40,22 @@ st.markdown("""
     
     /* Estilo para o sidebar com gradiente off-white para branco */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, 
-            #f8fafc 0%, 
-            #f8fafc 33.33%, 
-            #ffffff 33.33%, 
-            #ffffff 66.66%, 
-            #f8fafc 66.66%, 
-            #f8fafc 100%
-        );
+        background: linear-gradient(to bottom, #f8fafc, #ffffff);
+        padding: 2rem 1.5rem;
+        border-right: 1px solid rgba(226, 232, 240, 0.5);
+        overflow: hidden;
+        height: 100vh;
+        position: fixed;
+    }
+    
+    /* Remover barra de rolagem do sidebar */
+    [data-testid="stSidebar"] > div {
+        overflow: hidden !important;
+    }
+    
+    /* Remover barra de rolagem do conteúdo do sidebar */
+    [data-testid="stSidebar"] > div > div {
+        overflow: hidden !important;
     }
     
     /* Estilo para a barra de progresso */
@@ -450,7 +458,10 @@ if 'dataset' not in st.session_state:
 with st.sidebar:
     st.markdown("""
         <div style='text-align: center; margin-bottom: 30px;'>
-            <h1 style='color: #1e293b;'>LUX ANALYSIS</h1>
+            <h1 style='color: #1e293b; font-size: 2.2em;'>
+                <span style='font-weight: 800;'>LUX</span> 
+                <span style='font-weight: 400; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);'>ANALYSIS</span>
+            </h1>
         </div>
     """, unsafe_allow_html=True)
     
@@ -505,7 +516,7 @@ with st.sidebar:
     st.markdown("---")
     
     # Adicionar espaçamento antes do botão
-    st.markdown("<div style='height: 120px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 60px;'></div>", unsafe_allow_html=True)
     
     # Adicionar um separador visual
     st.markdown("<hr style='border: 1px solid rgba(179, 163, 17, 0.1); margin: 20px 0;'>", unsafe_allow_html=True)
