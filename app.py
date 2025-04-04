@@ -455,10 +455,21 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     # Campo de entrada para o ID do Cliente com ícone e placeholder
-    id_cliente_str = st.text_input("ID do Cliente:", placeholder="Digite o ID para análise", key="id_cliente_input", on_change=lambda: st.session_state.update({"should_analyze": True}))
+    st.markdown("""
+        <div class="filter-container" style="margin-bottom: -70px;">
+            <h3 class="filter-title">ID do Cliente</h3>
+            <div class="filter-content">
+    """, unsafe_allow_html=True)
+    
+    id_cliente_str = st.text_input("", placeholder="Digite o ID para análise", key="id_cliente_input", on_change=lambda: st.session_state.update({"should_analyze": True}))
+    
+    st.markdown("""
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
     
     # Adicionar espaçamento antes do expander
-    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: -35px;'></div>", unsafe_allow_html=True)
     
     # Filtro de transações
     st.markdown("""
@@ -477,7 +488,7 @@ with st.sidebar:
     selected_options = st.multiselect(
         "Selecione os tipos de transação",
         options=options,
-        default=options,
+        default=[],
         key="transaction_filter"
     )
 
