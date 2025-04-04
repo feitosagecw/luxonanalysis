@@ -577,7 +577,7 @@ with st.sidebar:
         """, unsafe_allow_html=True)
 
 # Título com ícone e subtítulo mais informativo
-st.markdown("<div class='subheader'>Overview</div>", unsafe_allow_html=True)
+st.markdown("<div class='subheader'>Bem vindo! </div>", unsafe_allow_html=True)
 
 # Adicionar uma descrição mais detalhada
 st.markdown("""
