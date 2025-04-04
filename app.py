@@ -10,86 +10,11 @@ import numpy as np
 from pathlib import Path
 import os
 from src.sql_manager import SQLManager
+import gc
+from stqdm import stqdm
 
-# Funções de formatação
-def format_float(x):
-    """Formata um número float para o padrão brasileiro."""
-    try:
-        return f"{x:,.2f}".replace(",", "temp").replace(".", ",").replace("temp", ".")
-    except Exception:
-        return x
-
-def format_brl(x):
-    """Formata um número para o padrão monetário brasileiro."""
-    try:
-        return f"R$ {x:,.2f}".replace(",", "temp").replace(".", ",").replace("temp", ".")
-    except Exception:
-        return x
-
-def format_percent(x):
-    """Formata um número para o padrão percentual brasileiro."""
-    try:
-        return f"{x:,.2f}%".replace(",", "temp").replace(".", ",").replace("temp", ".")
-    except Exception:
-        return x
-
-def clean_session_state():
-    """Limpa os dados armazenados no session_state após a conclusão da análise."""
-    keys_to_clean = [
-        'dataset',
-        'df_contact_info',
-        'df_card_transactions',
-        'client_info',
-        'df_blocked',
-        'blocked_summary',
-        'top_cash_in',
-        'top_cash_out'
-    ]
-    
-    for key in keys_to_clean:
-        if key in st.session_state:
-            del st.session_state[key]
-    
-    # Limpar variáveis de controle
-    if 'should_analyze' in st.session_state:
-        st.session_state.should_analyze = False
-    if 'analysis_done' in st.session_state:
-        st.session_state.analysis_done = False
-
-def clean_temp_files():
-    """Limpa arquivos temporários e cache."""
-    try:
-        # Limpar cache do Streamlit
-        cache_dir = Path.home() / '.streamlit' / 'cache'
-        if cache_dir.exists():
-            for file in cache_dir.glob('*'):
-                try:
-                    file.unlink()
-                except Exception as e:
-                    print(f"Erro ao deletar {file}: {e}")
-        
-        # Limpar arquivos temporários do BigQuery
-        temp_dir = Path.home() / '.bigquery' / 'temp'
-        if temp_dir.exists():
-            for file in temp_dir.glob('*'):
-                try:
-                    file.unlink()
-                except Exception as e:
-                    print(f"Erro ao deletar {file}: {e}")
-        
-        # Limpar arquivos temporários do pandas
-        temp_dir = Path.home() / '.pandas' / 'temp'
-        if temp_dir.exists():
-            for file in temp_dir.glob('*'):
-                try:
-                    file.unlink()
-                except Exception as e:
-                    print(f"Erro ao deletar {file}: {e}")
-        
-        return True
-    except Exception as e:
-        print(f"Erro ao limpar arquivos temporários: {e}")
-        return False
+# Inicializar o gerenciador de SQL
+sql_manager = SQLManager()
 
 # Configuração da página
 st.set_page_config(
@@ -113,61 +38,67 @@ st.markdown("""
         --text-color: #1e293b;
     }
     
-    /* Estilo para o sidebar com gradiente preto para cinza */
+    /* Estilo para o sidebar com gradiente off-white para branco */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, 
-            #1a1a1a 0%, 
-            #1a1a1a 33.33%, 
+            #f8fafc 0%, 
+            #f8fafc 33.33%, 
             #ffffff 33.33%, 
             #ffffff 66.66%, 
-            #4a4a4a 66.66%, 
-            #4a4a4a 100%
+            #f8fafc 66.66%, 
+            #f8fafc 100%
         );
+    }
+    
+    /* Estilo para a barra de progresso */
+    div[data-testid="stProgress"] > div > div {
+        background-color: #000000 !important;
+        border-radius: 4px !important;
     }
     
     /* Ajuste das cores do texto no sidebar para melhor contraste */
     [data-testid="stSidebar"] [data-testid="stMarkdown"] {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o título no sidebar */
     [data-testid="stSidebar"] h1 {
-        color: white !important;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        color: #1e293b !important;
+        text-shadow: none;
     }
     
     /* Estilo para labels no sidebar */
     [data-testid="stSidebar"] label {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o input de texto no sidebar */
     [data-testid="stTextInput"] input {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        color: black !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        border: 1px solid #e2e8f0 !important;
     }
     
     [data-testid="stTextInput"] input:focus {
-        border-color: #60a5fa !important;
-        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
     }
     
     /* Estilo para o expander no sidebar */
     [data-testid="stExpander"] {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
     }
     
     /* Estilo para os checkboxes no sidebar */
     [data-testid="stCheckbox"] {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o botão no sidebar */
     .stButton > button {
-        background: #fdfefb !important;
-        color: black !important;
+        background: linear-gradient(135deg, #1e293b, #334155) !important;
+        color: white !important;
         border: none !important;
         padding: 0.75rem 1.5rem !important;
         border-radius: 0.5rem !important;
@@ -177,141 +108,140 @@ st.markdown("""
     }
     
     .stButton > button:hover {
-        background: #0c1004 !important;
-        color: white !important;
+        background: linear-gradient(135deg, #0f172a, #1e293b) !important;
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2) !important;
     }
     
     /* Estilo para o texto do expander no sidebar */
     [data-testid="stExpander"] [data-testid="stMarkdown"] {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do checkbox no sidebar */
     [data-testid="stCheckbox"] [data-testid="stMarkdown"] {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do radio no sidebar */
     [data-testid="stRadio"] [data-testid="stMarkdown"] {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do selectbox no sidebar */
     [data-testid="stSelectbox"] [data-testid="stMarkdown"] {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do text input no sidebar */
     [data-testid="stTextInput"] [data-testid="stMarkdown"] {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do button no sidebar */
     [data-testid="stButton"] [data-testid="stMarkdown"] {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do divider no sidebar */
     [data-testid="stDivider"] [data-testid="stMarkdown"] {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do expander header no sidebar */
     .streamlit-expanderHeader {
-        color: white !important;
+        color: #1e293b !important;
     }
     
-    /* Estilo específico para o título do expander "Filtro de Transações" - seletor mais específico */
+    /* Estilo específico para o título do expander "Filtro de Transações" */
     div[data-testid="stExpander"] > div > div > div > span {
-        color: white !important;
+        color: #1e293b !important;
     }
     
-    /* Estilo específico para o título do expander "Filtro de Transações" - seletor direto */
+    /* Estilo específico para o título do expander "Filtro de Transações" */
     .streamlit-expanderHeader {
-        color: white !important;
+        color: #1e293b !important;
     }
     
-    /* Estilo específico para o título do expander "Filtro de Transações" - seletor direto para o texto */
+    /* Estilo específico para o título do expander "Filtro de Transações" */
     .streamlit-expanderHeader p {
-        color: white !important;
+        color: #1e293b !important;
     }
     
-    /* Estilo específico para o título do expander "Filtro de Transações" - seletor direto para o texto */
+    /* Estilo específico para o título do expander "Filtro de Transações" */
     .streamlit-expanderHeader div {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do expander content no sidebar */
     [data-testid="stExpander"] .streamlit-expanderContent {
-        background-color: white !important;
+        background-color: #ffffff !important;
     }
     
     /* Estilo para o texto do checkbox label no sidebar */
     [data-testid="stCheckbox"] .stCheckbox {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do radio label no sidebar */
     [data-testid="stRadio"] .stRadio {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do selectbox label no sidebar */
     [data-testid="stSelectbox"] .stSelectbox {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do text input label no sidebar */
     [data-testid="stTextInput"] .stTextInput {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do button label no sidebar */
     [data-testid="stButton"] .stButton {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do divider label no sidebar */
     [data-testid="stDivider"] .stDivider {
-        color: white !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do expander content no sidebar - segunda coluna */
     [data-testid="stExpander"] .streamlit-expanderContent {
-        background-color: white !important;
-        color: black !important;
+        background-color: #ffffff !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do checkbox label no sidebar - segunda coluna */
     [data-testid="stCheckbox"] .stCheckbox {
-        color: black !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do radio label no sidebar - segunda coluna */
     [data-testid="stRadio"] .stRadio {
-        color: black !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do selectbox label no sidebar - segunda coluna */
     [data-testid="stSelectbox"] .stSelectbox {
-        color: black !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do text input label no sidebar - segunda coluna */
     [data-testid="stTextInput"] .stTextInput {
-        color: black !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do button label no sidebar - segunda coluna */
     [data-testid="stButton"] .stButton {
-        color: black !important;
+        color: #1e293b !important;
     }
     
     /* Estilo para o texto do divider label no sidebar - segunda coluna */
     [data-testid="stDivider"] .stDivider {
-        color: black !important;
+        color: #1e293b !important;
     }
     
     /* Fundo com gradiente mais suave e moderno */
@@ -405,12 +335,6 @@ st.markdown("""
         background-color: #f1f5f9;
     }
 
-    /* Barra de progresso mais moderna */
-    .stProgress > div > div {
-        background: linear-gradient(90deg, #3b82f6, #60a5fa);
-        border-radius: 4px;
-    }
-
     /* Cards de dados mais modernos */
     .dataframe {
         border-radius: 12px;
@@ -426,6 +350,85 @@ st.markdown("""
     """,
     unsafe_allow_html=True
 )
+
+# Funções de formatação
+def format_float(x):
+    """Formata um número float para o padrão brasileiro."""
+    try:
+        return f"{x:,.2f}".replace(",", "temp").replace(".", ",").replace("temp", ".")
+    except Exception:
+        return x
+
+def format_brl(x):
+    """Formata um número para o padrão monetário brasileiro."""
+    try:
+        return f"R$ {x:,.2f}".replace(",", "temp").replace(".", ",").replace("temp", ".")
+    except Exception:
+        return x
+
+def format_percent(x):
+    """Formata um número para o padrão percentual brasileiro."""
+    try:
+        return f"{x:,.2f}%".replace(",", "temp").replace(".", ",").replace("temp", ".")
+    except Exception:
+        return x
+
+def clean_session_state():
+    """Limpa os dados armazenados no session_state após a conclusão da análise."""
+    keys_to_clean = [
+        'dataset',
+        'df_contact_info',
+        'df_card_transactions',
+        'client_info',
+        'df_blocked',
+        'blocked_summary',
+        'top_cash_in',
+        'top_cash_out'
+    ]
+    for key in keys_to_clean:
+        if key in st.session_state:
+            del st.session_state[key]
+    
+    # Limpar variáveis de controle
+    if 'should_analyze' in st.session_state:
+        st.session_state.should_analyze = False
+    if 'analysis_done' in st.session_state:
+        st.session_state.analysis_done = False
+
+def clean_temp_files():
+    """Limpa arquivos temporários e cache."""
+    try:
+        # Limpar cache do Streamlit
+        cache_dir = Path.home() / '.streamlit' / 'cache'
+        if cache_dir.exists():
+            for file in cache_dir.glob('*'):
+                try:
+                    file.unlink()
+                except Exception as e:
+                    print(f"Erro ao deletar {file}: {e}")
+        
+        # Limpar arquivos temporários do BigQuery
+        temp_dir = Path.home() / '.bigquery' / 'temp'
+        if temp_dir.exists():
+            for file in temp_dir.glob('*'):
+                try:
+                    file.unlink()
+                except Exception as e:
+                    print(f"Erro ao deletar {file}: {e}")
+        
+        # Limpar arquivos temporários do pandas
+        temp_dir = Path.home() / '.pandas' / 'temp'
+        if temp_dir.exists():
+            for file in temp_dir.glob('*'):
+                try:
+                    file.unlink()
+                except Exception as e:
+                    print(f"Erro ao deletar {file}: {e}")
+        
+        return True
+    except Exception as e:
+        print(f"Erro ao limpar arquivos temporários: {e}")
+        return False
 
 # Inicializar variáveis do session_state se não existirem
 if 'search_term' not in st.session_state:
@@ -443,77 +446,69 @@ if 'show_corporate_cards' not in st.session_state:
 if 'dataset' not in st.session_state:
     st.session_state.dataset = None
 
-# Barra de progresso com estilo personalizado
-progress_bar = st.progress(0)
-
-# Inicializar o gerenciador de SQL
-sql_manager = SQLManager()
-
 # Menu Sidebar
 with st.sidebar:
     st.markdown("""
         <div style='text-align: center; margin-bottom: 30px;'>
-            <h1 style='color: #1e293b;'> Lux</h1>
+            <h1 style='color: #1e293b;'>LUX ANALYSIS</h1>
         </div>
     """, unsafe_allow_html=True)
     
     # Campo de entrada para o ID do Cliente com ícone e placeholder
-    id_cliente_str = st.text_input("ID do Cliente:", placeholder="Digite o ID para análise", key="id_cliente_input")
+    id_cliente_str = st.text_input("ID do Cliente:", placeholder="Digite o ID para análise", key="id_cliente_input", on_change=lambda: st.session_state.update({"should_analyze": True}))
     
     # Adicionar espaçamento antes do expander
-    st.markdown("<div style='height: 80px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
     
-    # Menu expansível para filtros (agora abaixo do campo de entrada)
-    with st.expander("Filtro de Transações", expanded=False):
-        # Adicionar estilo personalizado para o título do expander e background
-        st.markdown("""
-            <style>
-            /* Estilo específico para o título do expander "Filtro de Transações" */
-            .streamlit-expanderHeader {
-                color: white !important;
-            }
-            
-            /* Estilo para o background do expander */
-            [data-testid="stExpander"] {
-                background-color: #f8fafc !important;
-            }
-            
-            /* Estilo para o conteúdo do expander */
-            [data-testid="stExpander"] .streamlit-expanderContent {
-                background-color: #f8fafc !important;
-            }
-            
-            /* Estilo para o texto dentro do expander */
-            [data-testid="stExpander"] .streamlit-expanderContent label {
-                color: #1e293b !important;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-        
-        st.session_state.show_pep = st.checkbox("PEP", value=st.session_state.show_pep)
-        st.session_state.show_corporate_cards = st.checkbox("Cartões Corporativos", value=st.session_state.show_corporate_cards)
+    # Filtro de transações
+    st.markdown("""
+        <div class="filter-container">
+            <h3 class="filter-title">Filtro de Transações</h3>
+            <div class="filter-content">
+    """, unsafe_allow_html=True)
+
+    # Opções para o filtro
+    options = [
+        "PEP",
+        "Cartões Corporativos"
+    ]
+
+    # Componente multiselect com estilo personalizado
+    selected_options = st.multiselect(
+        "Selecione os tipos de transação",
+        options=options,
+        default=options,
+        key="transaction_filter"
+    )
+
+    # Atualizar o session_state com base nas opções selecionadas
+    st.session_state.show_pep = "PEP" in selected_options
+    st.session_state.show_corporate_cards = "Cartões Corporativos" in selected_options
+
+    st.markdown("""
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Separador visual
+    st.markdown("---")
     
     # Adicionar espaçamento antes do botão
-    st.markdown("<div style='height: 240px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 120px;'></div>", unsafe_allow_html=True)
     
     # Adicionar um separador visual
     st.markdown("<hr style='border: 1px solid rgba(179, 163, 17, 0.1); margin: 20px 0;'>", unsafe_allow_html=True)
     
-    # Criar um container fixo para o botão na terceira coluna
-    button_container = st.container()
-    with button_container:
-        # Botão de análise no sidebar - agora na terceira coluna
-        if st.button("Analisar 🔍 ", key="analyze_button", use_container_width=True):
-            if id_cliente_str:
-                try:
-                    id_client = int(id_cliente_str)
-                except ValueError:
-                    st.error("❌ Por favor, insira um ID numérico válido.")
-                else:
-                    st.session_state.id_client = id_client
-                    st.session_state.should_analyze = True
-            else:
-                st.warning("Por favor, insira um ID do cliente.")
+    # Botão de análise no sidebar
+    if st.button("Analisar", key="analyze_button", use_container_width=True) or st.session_state.get("should_analyze", False):
+        if id_cliente_str:
+            try:
+                st.session_state.id_client = int(id_cliente_str)
+                st.session_state.should_analyze = True
+            except ValueError:
+                st.error("❌ Por favor, insira um ID numérico válido.")
+        else:
+            st.warning("Por favor, insira um ID do cliente.")
     
     # Se a análise já foi feita, mostrar os filtros
     if 'analysis_done' in st.session_state and st.session_state.analysis_done:
@@ -546,7 +541,10 @@ st.markdown("""
 if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     id_client = st.session_state.id_client
     st.info(f"Iniciando análise para o cliente: {id_client} 🔎")
-    progress_bar.progress(10)
+    
+    # Barra de progresso com stqdm
+    for _ in stqdm(range(100), desc="Realizando análise", mininterval=0.1):
+        time.sleep(0.05)
             
     # Conectar ao BigQuery
     creds, _ = default()
@@ -561,8 +559,7 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     except Exception as e:
         st.error(f"Erro ao executar a consulta de informações do cliente: {e}")
         client_info = None
-    progress_bar.progress(20)
-            
+    
     if client_info is not None and not client_info.empty:
         client_name = client_info.iloc[0]['nome_cliente']
         client_age = client_info.iloc[0]['idade']
@@ -591,8 +588,7 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     except Exception as e:
         st.error(f"Erro ao executar a consulta Pix: {e}")
         dataset = None
-    progress_bar.progress(40)
-            
+    
     if dataset is not None and not dataset.empty:
         # Renomear colunas para português
         dataset.rename(columns={
@@ -676,7 +672,6 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
             )
             
         balance = cash_in_total - cash_out_total
-        progress_bar.progress(60)
         
         # Carregar o CSV de apostas ("gateway_bet.csv") e cruzar com a coluna "Parte"
         try:
@@ -709,7 +704,6 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
         summary_df["Valor Total (R$)"] = summary_df["Valor Total (R$)"].apply(format_brl)
         summary_df["Proporcional Bet"] = summary_df["Proporcional Bet"].apply(lambda x: format_percent(x) if pd.notnull(x) else "")
         
-        progress_bar.progress(80)
         st.subheader("💡 Dados Sintéticos - Resumo")
         st.table(summary_df)
         
@@ -862,8 +856,7 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     except Exception as e:
         st.error(f"Erro na consulta de transações de cartões: {e}")
         df_card_transactions = None
-    progress_bar.progress(90)
-        
+    
     if df_card_transactions is not None and not df_card_transactions.empty:
         # Renomear colunas para português
         df_card_transactions.rename(columns={
@@ -921,8 +914,7 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     except Exception as e:
         st.error(f"Erro ao executar a consulta de informações de contato: {e}")
         df_contact_info = None
-    progress_bar.progress(95)
-
+    
     if df_contact_info is not None and not df_contact_info.empty:
         # Renomear colunas para português
         df_contact_info.rename(columns={
@@ -1137,7 +1129,6 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     # Marcar a análise como concluída
     st.session_state.analysis_done = True
     st.session_state.should_analyze = False
-    progress_bar.progress(100)
     
     st.markdown("""
         <div style='background-color: #ecfdf5; padding: 20px; border-radius: 12px; margin: 20px 0;'>
@@ -1153,5 +1144,4 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     clean_session_state()
     
     # Forçar coleta de lixo
-    import gc
     gc.collect()

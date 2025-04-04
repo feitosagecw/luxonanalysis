@@ -1,16 +1,15 @@
-<<<<<<< HEAD
 streamlit==1.44.1
-=======
-streamlit
->>>>>>> 67dae1cb794d7c58f09a2a862caa40caabba2afa
-google-cloud-bigquery
-google-auth
-gspread
-google-api-python-client
-oauth2client
-gspread_dataframe
-db-dtypes
-matplotlib
-networkx
-pyvis
-plotly
+google-cloud-bigquery==3.17.0
+google-auth==2.27.0
+gspread==6.0.2
+google-api-python-client==2.118.0
+oauth2client==4.1.3
+gspread_dataframe==3.3.1
+db-dtypes==1.2.0
+matplotlib==3.8.2
+networkx==3.2.1
+pyvis==0.3.2
+plotly==5.18.0
+stqdm==0.0.5
+pandas==2.2.0
+numpy==1.26.3
