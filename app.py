@@ -601,7 +601,7 @@ st.markdown(f"<div class='subheader'>{saudacao}</div>", unsafe_allow_html=True)
 # Adicionar uma descrição mais detalhada
 st.markdown("""
     <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 30px;'>
-        <h3 style='color: #1e293b; margin-bottom: 10px;'>ℹ️ Sobre a Análise</h3>
+        <h3 style='color: #1e293b; margin-bottom: 10px;'>ℹ︎ Sobre a Análise</h3>
         <p style='color:rgb(40, 48, 60); line-height: 1.6;'>
             Esta ferramenta permite analisar detalhadamente as transações de um cliente, incluindo:
         </p>
@@ -609,8 +609,10 @@ st.markdown("""
             <li>Concentração de transações PIX</li>
             <li>Análise de transações em horários atípicos</li>
             <li>Transações com cartões</li>
-            <li>Identificação de padrões suspeitos</li>
-        </ul>
+            <li>Identificação de padrões suspeitos e outras informações relevantes</li>
+        <p style='color:rgb(80, 05, 50); line-height: 2.6;'>
+            <b>Para analisar transações específicas como TED, GAFI, PEP e etc, é necessário selecionar o filtro correspondente.
+        </p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -627,20 +629,20 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     creds, _ = default()
     client = bigquery.Client(project="infinitepay-production")
             
-    # Definir a consulta de informações do usuário
+    # Consulta informações do cliente
     try:
         query_user = sql_manager.get_user_info_sql(id_client)
-        query_job_user = client.query(query_user)
-        client_info = query_job_user.result().to_dataframe()
+        query_job = client.query(query_user)
+        df_user = query_job.result().to_dataframe()
         st.success("Consulta de informações do cliente concluída com sucesso! ✅")
     except Exception as e:
         st.error(f"Erro ao executar a consulta de informações do cliente: {e}")
-        client_info = None
-    
-    if client_info is not None and not client_info.empty:
-        client_name = client_info.iloc[0]['nome_cliente']
-        client_age = client_info.iloc[0]['idade']
-        client_status = client_info.iloc[0]['status']
+        df_user = None
+
+    if df_user is not None and not df_user.empty:
+        client_name = df_user.iloc[0]['nome_cliente']
+        client_age = df_user.iloc[0]['idade']
+        client_status = df_user.iloc[0]['status']
             
         # Exibir informações do cliente
         st.markdown(f"""
@@ -924,170 +926,6 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     else:
         st.error("Nenhum dado retornado da consulta Pix. ❌")
         
-    # Consulta GAFI
-    if "GAFI" in selected_options:
-        try:
-            query_gafi = sql_manager.get_gafi_transactions_sql(id_client)
-            query_job_gafi = client.query(query_gafi)
-            df_gafi = query_job_gafi.result().to_dataframe()
-            
-            if not df_gafi.empty:
-                st.markdown("""
-                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                        <h3 style='color: #1e293b; margin-bottom: 15px;'>🌍 Transações GAFI</h3>
-                """, unsafe_allow_html=True)
-                
-                st.dataframe(
-                    df_gafi,
-                    use_container_width=True,
-                    hide_index=True
-                )
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.warning("Nenhuma transação GAFI encontrada para este cliente.")
-                
-        except Exception as e:
-            st.error(f"Erro ao executar a consulta de transações GAFI: {e}")
-    
-    # Consulta Transações Internacionais
-    if "Internacionais" in selected_options:
-        try:
-            query_international = sql_manager.get_international_transactions_sql(id_client)
-            query_job_international = client.query(query_international)
-            df_international = query_job_international.result().to_dataframe()
-            
-            if not df_international.empty:
-                st.markdown("""
-                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                        <h3 style='color: #1e293b; margin-bottom: 15px;'>🌎 Transações Internacionais</h3>
-                """, unsafe_allow_html=True)
-                
-                # Resumo por país
-                resumo_paises = df_international.groupby('Country_Name').agg({
-                    'amount': ['count', 'sum']
-                }).reset_index()
-                
-                # Renomear colunas
-                resumo_paises.columns = ['País', 'Quantidade de Transações', 'Valor Total']
-                
-                # Formatar valores monetários
-                resumo_paises['Valor Total'] = resumo_paises['Valor Total'].apply(format_brl)
-                
-                # Ordenar por valor total
-                resumo_paises = resumo_paises.sort_values('Valor Total', ascending=False)
-                
-                st.markdown("""
-                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                        <h3 style='color: #1e293b; margin-bottom: 15px;'>📊 Resumo por País</h3>
-                """, unsafe_allow_html=True)
-                
-                # Exibir tabela resumo
-                st.dataframe(
-                    resumo_paises,
-                    use_container_width=True,
-                    hide_index=True
-                )
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-                
-                # Exibir tabela detalhada
-                st.markdown("""
-                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                        <h3 style='color: #1e293b; margin-bottom: 15px;'>📋 Detalhamento das Transações</h3>
-                """, unsafe_allow_html=True)
-                
-                st.dataframe(
-                    df_international,
-                    use_container_width=True,
-                    hide_index=True
-                )
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.warning("Nenhuma transação internacional encontrada para este cliente.")
-                
-        except Exception as e:
-            st.error(f"Erro ao executar a consulta de transações internacionais: {e}")
-    
-    # Consulta TED
-    if "TED" in selected_options:
-        try:
-            query_ted = sql_manager.get_ted_transactions_sql(id_client)
-            query_job_ted = client.query(query_ted)
-            df_ted = query_job_ted.result().to_dataframe()
-            
-            if not df_ted.empty:
-                st.markdown("""
-                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💸 Transações TED</h3>
-                """, unsafe_allow_html=True)
-                
-                st.dataframe(
-                    df_ted,
-                    use_container_width=True,
-                    hide_index=True
-                )
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.warning("Nenhuma transação TED encontrada para este cliente.")
-                
-        except Exception as e:
-            st.error(f"Erro ao executar a consulta de transações TED: {e}")
-    
-    # Consulta Issuing
-    if "Issuing" in selected_options:
-        try:
-            query_issuing = sql_manager.get_issuing_transactions_sql(id_client)
-            query_job_issuing = client.query(query_issuing)
-            df_issuing = query_job_issuing.result().to_dataframe()
-            
-            if not df_issuing.empty:
-                st.markdown("""
-                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💳 Transações Issuing</h3>
-                """, unsafe_allow_html=True)
-                
-                st.dataframe(
-                    df_issuing,
-                    use_container_width=True,
-                    hide_index=True
-                )
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.warning("Nenhuma transação Issuing encontrada para este cliente.")
-                
-        except Exception as e:
-            st.error(f"Erro ao executar a consulta de transações Issuing: {e}")
-    
-    # Consulta Acquiring
-    if "Acquiring" in selected_options:
-        try:
-            query_acquiring = sql_manager.get_acquiring_transactions_sql(id_client)
-            query_job_acquiring = client.query(query_acquiring)
-            df_acquiring = query_job_acquiring.result().to_dataframe()
-            
-            if not df_acquiring.empty:
-                st.markdown("""
-                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💳 Transações Acquiring</h3>
-                """, unsafe_allow_html=True)
-                
-                st.dataframe(
-                    df_acquiring,
-                    use_container_width=True,
-                    hide_index=True
-                )
-                
-                st.markdown("</div>", unsafe_allow_html=True)
-            else:
-                st.warning("Nenhuma transação Acquiring encontrada para este cliente.")
-                
-        except Exception as e:
-            st.error(f"Erro ao executar a consulta de transações Acquiring: {e}")
-    
     # Executar consulta de transações de cartões
     try:
         query_card_transactions = sql_manager.get_card_transactions_sql(id_client)
@@ -1112,8 +950,81 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
                 <h3 style='color: #1e293b; margin-bottom: 15px;'>📱⭕️ Transações de Cartões</h3>
         """, unsafe_allow_html=True)
         
+        # Criar métricas resumidas
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            total_aprovado = df_card_transactions['Total Aprovado'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float).sum()
+            st.metric(
+                label="Total Aprovado",
+                value=format_brl(total_aprovado),
+                delta=None
+            )
+        
+        with col2:
+            total_atipico = df_card_transactions['Total Aprovado Atípico'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float).sum()
+            st.metric(
+                label="Total Aprovado Atípico",
+                value=format_brl(total_atipico),
+                delta=None
+            )
+        
+        with col3:
+            percentual_atipico = (total_atipico / total_aprovado * 100) if total_aprovado > 0 else 0
+            st.metric(
+                label="Percentual Atípico",
+                value=format_percent(percentual_atipico),
+                delta=None
+            )
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+        
         # Exibir tabela de transações
         st.dataframe(df_card_transactions, use_container_width=True)
+
+        # Resumo sintético por método de captura
+        st.markdown("""
+            <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                <h3 style='color: #1e293b; margin-bottom: 15px;'>📊 Resumo por Método de Captura</h3>
+        """, unsafe_allow_html=True)
+
+        # Converter valores para numérico para cálculos
+        df_card_transactions['Total Aprovado (num)'] = df_card_transactions['Total Aprovado'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float)
+        df_card_transactions['Total Aprovado Atípico (num)'] = df_card_transactions['Total Aprovado Atípico'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float)
+
+        # Agrupar por método de captura
+        resumo_metodo = df_card_transactions.groupby('Met_Cartao').agg({
+            'Total Aprovado (num)': 'sum',
+            'Total Aprovado Atípico (num)': 'sum',
+            'Nome do Portador': 'count'
+        }).reset_index()
+
+        # Renomear colunas
+        resumo_metodo.columns = ['Método de Captura', 'Total Aprovado', 'Total Atípico', 'Quantidade de Cartões']
+
+        # Calcular percentual atípico
+        resumo_metodo['Percentual Atípico'] = (resumo_metodo['Total Atípico'] / resumo_metodo['Total Aprovado'] * 100).round(2)
+
+        # Formatar valores monetários
+        resumo_metodo['Total Aprovado'] = resumo_metodo['Total Aprovado'].apply(format_brl)
+        resumo_metodo['Total Atípico'] = resumo_metodo['Total Atípico'].apply(format_brl)
+        resumo_metodo['Percentual Atípico'] = resumo_metodo['Percentual Atípico'].apply(lambda x: f"{x:.2f}%")
+
+        # Ordenar por total aprovado
+        resumo_metodo = resumo_metodo.sort_values('Total Aprovado', ascending=False)
+
+        # Exibir tabela resumo
+        st.dataframe(
+            resumo_metodo,
+            column_config={
+                "Método de Captura": "Método de Captura",
+                "Total Aprovado": "Total Aprovado",
+                "Total Atípico": "Total Atípico",
+                "Quantidade de Cartões": "Qtd. Cartões",
+                "Percentual Atípico": "% Atípico"
+            },
+            hide_index=True
+        )
 
         st.markdown("</div>", unsafe_allow_html=True)
     else:
@@ -1197,9 +1108,9 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
         st.warning("Nenhuma informação de contato encontrada para este cliente.")
     
     # Consulta PEP
-    if st.session_state.show_pep:
+    if "PEP" in selected_options:
         try:
-            query_pep = sql_manager.get_pep_transactions_sql(id_client)
+            query_pep = sql_manager.get_pep_sql(id_client)
             query_job_pep = client.query(query_pep)
             df_pep = query_job_pep.result().to_dataframe()
             
@@ -1220,13 +1131,15 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
             else:
                 st.warning("Nenhuma transação com PEP encontrada para este cliente.")
                 
+            st.success("Consulta PEP concluída com sucesso! ✅")
         except Exception as e:
             st.error(f"Erro ao executar a consulta de transações PEP: {e}")
+            df_pep = None
     
     # Consulta Cartões Corporativos
-    if st.session_state.show_corporate_cards:
+    if "Cartões Corporativos" in selected_options:
         try:
-            query_corporate = sql_manager.get_corporate_cards_query(id_client)
+            query_corporate = sql_manager.get_corporate_cards_sql(id_client)
             query_job_corporate = client.query(query_corporate)
             df_corporate = query_job_corporate.result().to_dataframe()
             
@@ -1247,8 +1160,126 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
             else:
                 st.warning("Nenhuma transação com cartões corporativos encontrada para este cliente.")
                 
+            st.success("Consulta Cartões Corporativos concluída com sucesso! ✅")
         except Exception as e:
             st.error(f"Erro ao executar a consulta de cartões corporativos: {e}")
+            df_corporate = None
+    
+    # Consulta GAFI
+    if "GAFI" in selected_options:
+        try:
+            query_gafi = sql_manager.get_gafi_sql(id_client)
+            query_job_gafi = client.query(query_gafi)
+            df_gafi = query_job_gafi.result().to_dataframe()
+            
+            if not df_gafi.empty:
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>🔍 Transações GAFI</h3>
+                """, unsafe_allow_html=True)
+                
+                # Exibir tabela com estilo personalizado
+                st.dataframe(
+                    df_gafi,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação GAFI encontrada para este cliente.")
+                
+            st.success("Consulta GAFI concluída com sucesso! ✅")
+        except Exception as e:
+            st.error(f"Erro ao executar a consulta GAFI: {e}")
+            df_gafi = None
+    
+    # Consulta TED
+    if "TED" in selected_options:
+        try:
+            query_ted = sql_manager.get_ted_sql(id_client)
+            query_job_ted = client.query(query_ted)
+            df_ted = query_job_ted.result().to_dataframe()
+            
+            if not df_ted.empty:
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💸 Transações TED</h3>
+                """, unsafe_allow_html=True)
+                
+                # Exibir tabela com estilo personalizado
+                st.dataframe(
+                    df_ted,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação TED encontrada para este cliente.")
+                
+            st.success("Consulta TED concluída com sucesso! ✅")
+        except Exception as e:
+            st.error(f"Erro ao executar a consulta TED: {e}")
+            df_ted = None
+    
+    # Consulta Issuing
+    if "Issuing" in selected_options:
+        try:
+            query_issuing = sql_manager.get_issuing_sql(id_client)
+            query_job_issuing = client.query(query_issuing)
+            df_issuing = query_job_issuing.result().to_dataframe()
+            
+            if not df_issuing.empty:
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💳 Transações Issuing</h3>
+                """, unsafe_allow_html=True)
+                
+                # Exibir tabela com estilo personalizado
+                st.dataframe(
+                    df_issuing,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação Issuing encontrada para este cliente.")
+                
+            st.success("Consulta Issuing concluída com sucesso! ✅")
+        except Exception as e:
+            st.error(f"Erro ao executar a consulta Issuing: {e}")
+            df_issuing = None
+    
+    # Consulta Acquiring
+    if "Acquiring" in selected_options:
+        try:
+            query_acquiring = sql_manager.get_acquiring_sql(id_client)
+            query_job_acquiring = client.query(query_acquiring)
+            df_acquiring = query_job_acquiring.result().to_dataframe()
+            
+            if not df_acquiring.empty:
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💳 Transações Acquiring</h3>
+                """, unsafe_allow_html=True)
+                
+                # Exibir tabela com estilo personalizado
+                st.dataframe(
+                    df_acquiring,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação Acquiring encontrada para este cliente.")
+                
+            st.success("Consulta Acquiring concluída com sucesso! ✅")
+        except Exception as e:
+            st.error(f"Erro ao executar a consulta Acquiring: {e}")
+            df_acquiring = None
     
     # Marcar a análise como concluída
     st.session_state.analysis_done = True

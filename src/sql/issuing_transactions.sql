@@ -1,3 +1,5 @@
+-- issuing_alert_check - transações cartão de pagamento da infinite pay ao cliente
+
 WITH
         high_risk_countries AS (
             SELECT

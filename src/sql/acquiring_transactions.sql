@@ -1,3 +1,5 @@
+-- CH_concentration - métrica construída a partir das transações com clientes (adquirëncia).
+
 SELECT 
   *,
   CONCAT("Portador: ", IFNULL(card_holder_name, "N/A"), 
@@ -7,5 +9,5 @@ SELECT
          " - Ticket médio: R$", CAST(ROUND(total_approved_by_ch / count_approved_transactions, 2) AS STRING),
          " - Porcentagem do TPV: ", CAST(ROUND(percentage, 2) AS STRING), "%.") AS modelo
 FROM `infinitepay-production.metrics_amlft.cardholder_concentration` 
-WHERE merchant_id = {id_client}
+WHERE merchant_id = {id_client} 
 ORDER BY percentage DESC; 
