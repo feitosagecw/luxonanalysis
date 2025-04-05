@@ -18,7 +18,7 @@ sql_manager = SQLManager()
 
 # Configuração da página
 st.set_page_config(
-    page_title="Lux",
+    page_title="Lux on Analysis",
     page_icon="src/images/stars_icon_shapes_v2/solid/10.png",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -386,7 +386,8 @@ st.markdown("""
         border-radius: 6px !important;
         padding: 4px 8px !important;
         margin: 2px !important;
-        font-size: 0.75em !important;
+        font-size: 1.05em !important;
+        font-weight: 500 !important;
     }
 
     .stMultiSelect [data-baseweb="tag"]:hover {
@@ -531,13 +532,18 @@ with st.sidebar:
             <h3 class="filter-title">Filtro de Transações</h3>
             <div class="filter-content">
     """, unsafe_allow_html=True)
-
+    
     # Opções para o filtro
     options = [
+        "Acquiring",
+        "Cartões Corporativos",
+        "GAFI",
+        "Internacionais",
+        "Issuing",
         "PEP",
-        "Cartões Corporativos"
+        "TED"
     ]
-
+    
     # Componente multiselect com estilo personalizado
     selected_options = st.multiselect(
         "Selecione os tipos de transação",
@@ -545,16 +551,16 @@ with st.sidebar:
         default=[],
         key="transaction_filter"
     )
-
+    
     # Atualizar o session_state com base nas opções selecionadas
     st.session_state.show_pep = "PEP" in selected_options
     st.session_state.show_corporate_cards = "Cartões Corporativos" in selected_options
-
+    
     st.markdown("""
             </div>
         </div>
     """, unsafe_allow_html=True)
-
+    
     # Adicionar espaçamento antes do botão
     st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
     
@@ -623,7 +629,7 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
             
     # Definir a consulta de informações do usuário
     try:
-        query_user = sql_manager.get_user_info_query(id_client)
+        query_user = sql_manager.get_user_info_sql(id_client)
         query_job_user = client.query(query_user)
         client_info = query_job_user.result().to_dataframe()
         st.success("Consulta de informações do cliente concluída com sucesso! ✅")
@@ -652,7 +658,7 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
 
     # Consulta Pix Concentração
     try:
-        query_pix = sql_manager.get_pix_concentration_query(id_client)
+        query_pix = sql_manager.get_pix_concentration_sql(id_client)
         query_job = client.query(query_pix)
         dataset = query_job.result().to_dataframe()
         st.success("Consulta Pix concluída com sucesso! ✅")
@@ -918,9 +924,173 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     else:
         st.error("Nenhum dado retornado da consulta Pix. ❌")
         
+    # Consulta GAFI
+    if "GAFI" in selected_options:
+        try:
+            query_gafi = sql_manager.get_gafi_transactions_sql(id_client)
+            query_job_gafi = client.query(query_gafi)
+            df_gafi = query_job_gafi.result().to_dataframe()
+            
+            if not df_gafi.empty:
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>🌍 Transações GAFI</h3>
+                """, unsafe_allow_html=True)
+                
+                st.dataframe(
+                    df_gafi,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação GAFI encontrada para este cliente.")
+                
+        except Exception as e:
+            st.error(f"Erro ao executar a consulta de transações GAFI: {e}")
+    
+    # Consulta Transações Internacionais
+    if "Internacionais" in selected_options:
+        try:
+            query_international = sql_manager.get_international_transactions_sql(id_client)
+            query_job_international = client.query(query_international)
+            df_international = query_job_international.result().to_dataframe()
+            
+            if not df_international.empty:
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>🌎 Transações Internacionais</h3>
+                """, unsafe_allow_html=True)
+                
+                # Resumo por país
+                resumo_paises = df_international.groupby('Country_Name').agg({
+                    'amount': ['count', 'sum']
+                }).reset_index()
+                
+                # Renomear colunas
+                resumo_paises.columns = ['País', 'Quantidade de Transações', 'Valor Total']
+                
+                # Formatar valores monetários
+                resumo_paises['Valor Total'] = resumo_paises['Valor Total'].apply(format_brl)
+                
+                # Ordenar por valor total
+                resumo_paises = resumo_paises.sort_values('Valor Total', ascending=False)
+                
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>📊 Resumo por País</h3>
+                """, unsafe_allow_html=True)
+                
+                # Exibir tabela resumo
+                st.dataframe(
+                    resumo_paises,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                # Exibir tabela detalhada
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>📋 Detalhamento das Transações</h3>
+                """, unsafe_allow_html=True)
+                
+                st.dataframe(
+                    df_international,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação internacional encontrada para este cliente.")
+                
+        except Exception as e:
+            st.error(f"Erro ao executar a consulta de transações internacionais: {e}")
+    
+    # Consulta TED
+    if "TED" in selected_options:
+        try:
+            query_ted = sql_manager.get_ted_transactions_sql(id_client)
+            query_job_ted = client.query(query_ted)
+            df_ted = query_job_ted.result().to_dataframe()
+            
+            if not df_ted.empty:
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💸 Transações TED</h3>
+                """, unsafe_allow_html=True)
+                
+                st.dataframe(
+                    df_ted,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação TED encontrada para este cliente.")
+                
+        except Exception as e:
+            st.error(f"Erro ao executar a consulta de transações TED: {e}")
+    
+    # Consulta Issuing
+    if "Issuing" in selected_options:
+        try:
+            query_issuing = sql_manager.get_issuing_transactions_sql(id_client)
+            query_job_issuing = client.query(query_issuing)
+            df_issuing = query_job_issuing.result().to_dataframe()
+            
+            if not df_issuing.empty:
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💳 Transações Issuing</h3>
+                """, unsafe_allow_html=True)
+                
+                st.dataframe(
+                    df_issuing,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação Issuing encontrada para este cliente.")
+                
+        except Exception as e:
+            st.error(f"Erro ao executar a consulta de transações Issuing: {e}")
+    
+    # Consulta Acquiring
+    if "Acquiring" in selected_options:
+        try:
+            query_acquiring = sql_manager.get_acquiring_transactions_sql(id_client)
+            query_job_acquiring = client.query(query_acquiring)
+            df_acquiring = query_job_acquiring.result().to_dataframe()
+            
+            if not df_acquiring.empty:
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💳 Transações Acquiring</h3>
+                """, unsafe_allow_html=True)
+                
+                st.dataframe(
+                    df_acquiring,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação Acquiring encontrada para este cliente.")
+                
+        except Exception as e:
+            st.error(f"Erro ao executar a consulta de transações Acquiring: {e}")
+    
     # Executar consulta de transações de cartões
     try:
-        query_card_transactions = sql_manager.get_card_transactions_query(id_client)
+        query_card_transactions = sql_manager.get_card_transactions_sql(id_client)
         query_job_card = client.query(query_card_transactions)
         df_card_transactions = query_job_card.result().to_dataframe()
         st.success("Consulta Transações de Cartões concluída com sucesso! ✅")
@@ -942,43 +1112,16 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
                 <h3 style='color: #1e293b; margin-bottom: 15px;'>📱⭕️ Transações de Cartões</h3>
         """, unsafe_allow_html=True)
         
-        # Criar métricas resumidas
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            total_aprovado = df_card_transactions['Total Aprovado'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float).sum()
-            st.metric(
-                label="Total Aprovado",
-                value=format_brl(total_aprovado),
-                delta=None
-            )
-        
-        with col2:
-            total_atipico = df_card_transactions['Total Aprovado Atípico'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float).sum()
-            st.metric(
-                label="Total Aprovado Atípico",
-                value=format_brl(total_atipico),
-                delta=None
-            )
-        
-        with col3:
-            percentual_atipico = (total_atipico / total_aprovado * 100) if total_aprovado > 0 else 0
-            st.metric(
-                label="Percentual Atípico",
-                value=format_percent(percentual_atipico),
-                delta=None
-            )
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-        
         # Exibir tabela de transações
         st.dataframe(df_card_transactions, use_container_width=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.warning("Não há informações sobre Transações de Cartões.")
     
     # Executar consulta de informações de contato
     try:
-        query_contact_info = sql_manager.get_contact_info_query(id_client)
+        query_contact_info = sql_manager.get_contact_info_sql(id_client)
         query_job_contact = client.query(query_contact_info)
         df_contact_info = query_job_contact.result().to_dataframe()
         st.success("Consulta de informações de contato concluída com sucesso! ✅")
@@ -1053,42 +1196,14 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     else:
         st.warning("Nenhuma informação de contato encontrada para este cliente.")
     
-    # Executar consulta de transações PEP se o filtro estiver ativado
+    # Consulta PEP
     if st.session_state.show_pep:
         try:
-            query_pep = sql_manager.get_pep_query(id_client)
-            
+            query_pep = sql_manager.get_pep_transactions_sql(id_client)
             query_job_pep = client.query(query_pep)
             df_pep = query_job_pep.result().to_dataframe()
             
             if not df_pep.empty:
-                # Renomear colunas para português
-                df_pep.rename(columns={
-                    "flagged_user_id": "ID do Usuário",
-                    "transfer_type": "Tipo de Transferência",
-                    "total_amount": "Valor Total",
-                    "pep_document_number": "CPF PEP",
-                    "name": "Nome PEP",
-                    "agency": "Órgão",
-                    "job": "Cargo",
-                    "job_description": "Descrição do Cargo",
-                    "started_at": "Data de Início",
-                    "final_eligibility_date": "Data Final de Elegibilidade"
-                }, inplace=True)
-                
-                # Formatar valores monetários
-                df_pep["Valor Total"] = df_pep["Valor Total"].apply(lambda x: f"R$ {x:,.2f}")
-                
-                # Formatar datas
-                df_pep["Data de Início"] = pd.to_datetime(df_pep["Data de Início"]).dt.strftime("%d/%m/%Y")
-                df_pep["Data Final de Elegibilidade"] = pd.to_datetime(df_pep["Data Final de Elegibilidade"]).dt.strftime("%d/%m/%Y")
-                
-                # Converter tipos de transferência para português
-                df_pep["Tipo de Transferência"] = df_pep["Tipo de Transferência"].map({
-                    "cash-in": "Entrada",
-                    "cash-out": "Saída"
-                })
-                
                 st.markdown("""
                     <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
                         <h3 style='color: #1e293b; margin-bottom: 15px;'>👥 Transações com PEP</h3>
@@ -1101,54 +1216,21 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
                     hide_index=True
                 )
                 
-                # Exibir métricas
-                total_pep = len(df_pep)
-                total_value = df_pep["Valor Total"].str.replace("R$ ", "").str.replace(",", "").astype(float).sum()
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric(
-                        "Total de Transações com PEP",
-                        f"{total_pep}",
-                        delta=None
-                    )
-                with col2:
-                    st.metric(
-                        "Valor Total das Transações",
-                        f"R$ {total_value:,.2f}",
-                        delta=None
-                    )
+                st.markdown("</div>", unsafe_allow_html=True)
             else:
-                st.info("Nenhuma transação com PEP encontrada para este cliente.")
+                st.warning("Nenhuma transação com PEP encontrada para este cliente.")
                 
         except Exception as e:
             st.error(f"Erro ao executar a consulta de transações PEP: {e}")
     
-    # Executar consulta de cartões corporativos se o filtro estiver ativado
+    # Consulta Cartões Corporativos
     if st.session_state.show_corporate_cards:
         try:
-            query_corporate_cards = sql_manager.get_corporate_cards_query(id_client)
-            
-            query_job_corporate = client.query(query_corporate_cards)
+            query_corporate = sql_manager.get_corporate_cards_query(id_client)
+            query_job_corporate = client.query(query_corporate)
             df_corporate = query_job_corporate.result().to_dataframe()
             
             if not df_corporate.empty:
-                # Renomear colunas para português
-                df_corporate.rename(columns={
-                    "card_number": "Número do Cartão",
-                    "card_holder_name": "Nome do Portador",
-                    "sum_30_days": "Valor 30 Dias",
-                    "sum_60_days": "Valor 60 Dias",
-                    "sum_90_days": "Valor 90 Dias",
-                    "total_sum": "Valor Total",
-                    "night_sum": "Valor em Horário Noturno"
-                }, inplace=True)
-                
-                # Formatar valores monetários
-                colunas_monetarias = ["Valor 30 Dias", "Valor 60 Dias", "Valor 90 Dias", "Valor Total", "Valor em Horário Noturno"]
-                for coluna in colunas_monetarias:
-                    df_corporate[coluna] = df_corporate[coluna].apply(lambda x: f"R$ {x:,.2f}")
-                
                 st.markdown("""
                     <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
                         <h3 style='color: #1e293b; margin-bottom: 15px;'>💳 Cartões Corporativos</h3>
@@ -1161,38 +1243,9 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
                     hide_index=True
                 )
                 
-                # Exibir métricas
-                total_cards = len(df_corporate)
-                
-                # Converter valores monetários para cálculos
-                df_corporate["Valor Total (num)"] = df_corporate["Valor Total"].str.replace("R$ ", "").str.replace(",", "").astype(float)
-                df_corporate["Valor Noturno (num)"] = df_corporate["Valor em Horário Noturno"].str.replace("R$ ", "").str.replace(",", "").astype(float)
-                
-                total_value = df_corporate["Valor Total (num)"].sum()
-                total_night = df_corporate["Valor Noturno (num)"].sum()
-                percent_night = (total_night / total_value * 100) if total_value > 0 else 0
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric(
-                        "Total de Cartões Corporativos",
-                        f"{total_cards}",
-                        delta=None
-                    )
-                with col2:
-                    st.metric(
-                        "Valor Total das Transações",
-                        f"R$ {total_value:,.2f}",
-                        delta=None
-                    )
-                with col3:
-                    st.metric(
-                        "Valor em Horário Noturno",
-                        f"R$ {total_night:,.2f}",
-                        delta=f"{percent_night:.2f}% do total"
-                    )
+                st.markdown("</div>", unsafe_allow_html=True)
             else:
-                st.info("Nenhuma transação com cartões corporativos encontrada para este cliente.")
+                st.warning("Nenhuma transação com cartões corporativos encontrada para este cliente.")
                 
         except Exception as e:
             st.error(f"Erro ao executar a consulta de cartões corporativos: {e}")
