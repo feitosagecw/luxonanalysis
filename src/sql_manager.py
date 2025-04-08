@@ -59,4 +59,12 @@ class SQLManager:
     def get_acquiring_sql(self, id_client):
         """Retorna a consulta SQL para transações Acquiring com o ID do cliente substituído."""
         query = self.read_sql_file('acquiring_transactions.sql')
-        return query.format(id_client=id_client) 
+        return query.format(id_client=id_client)
+    
+    def get_card_transactions_all_sql(self):
+        """Retorna a consulta SQL para todas as transações de cartões."""
+        return self.read_sql_file('card_transactions_all.sql')
+    
+    def get_international_transactions_sql(self, id_client):
+        """Retorna a consulta SQL para transações internacionais."""
+        return self.read_sql_file('international_transactions.sql').format(id_client=id_client) 

@@ -425,6 +425,13 @@ def format_percent(x):
     except Exception:
         return x
 
+def convert_brl_to_float(value):
+    """Converte um valor monetário em formato brasileiro para float."""
+    try:
+        return float(str(value).replace('R$ ', '').replace('.', '').replace(',', '.'))
+    except:
+        return 0.0
+
 def clean_session_state():
     """Limpa os dados armazenados no session_state após a conclusão da análise."""
     keys_to_clean = [
@@ -535,6 +542,7 @@ with st.sidebar:
     
     # Opções para o filtro
     options = [
+        "PIX",
         "Acquiring",
         "Cartões Corporativos",
         "GAFI",
@@ -548,7 +556,7 @@ with st.sidebar:
     selected_options = st.multiselect(
         "Selecione os tipos de transação",
         options=options,
-        default=[],
+        default=["PIX", "Acquiring"],  # Definindo PIX e Acquiring como padrão
         key="transaction_filter"
     )
     
@@ -640,21 +648,63 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
         df_user = None
 
     if df_user is not None and not df_user.empty:
-        client_name = df_user.iloc[0]['nome_cliente']
-        client_age = df_user.iloc[0]['idade']
-        client_status = df_user.iloc[0]['status']
+        try:
+            # Extrair informações do cliente
+            client_id = df_user.iloc[0]['id_cliente']
+            client_name = df_user.iloc[0]['Nome']
+            client_age = df_user.iloc[0]['idade']
+            client_status = df_user.iloc[0]['status']
+            client_role = df_user.iloc[0]['Role_Type']
+            client_business = df_user.iloc[0]['categoria_negocio']
+            client_document = df_user.iloc[0]['document_number']
+            client_created_ch = df_user.iloc[0]['created_at_ch']
+            client_created_me = df_user.iloc[0]['created_at_me']
             
-        # Exibir informações do cliente
-        st.markdown(f"""
-            <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px;'>
-                <h3 style='color: #1e293b; margin-bottom: 15px;'>👤 Informações do Cliente</h3>
-                <ul style='color: #475569; line-height: 1.6;'>
-                    <li><strong>Nome:</strong> {client_name}</li>
-                    <li><strong>Idade:</strong> {client_age} anos</li>
-                    <li><strong>Status:</strong> {client_status}</li>
-                </ul>
-            </div>
-        """, unsafe_allow_html=True)
+            # Definir a cor do status baseado no valor
+            status_color = "color: #dc2626;" if client_status.lower() == "blocked" else "color: #475569;"
+            
+            # Formatar as datas de criação
+            created_ch_str = client_created_ch.strftime('%d/%m/%Y') if pd.notna(client_created_ch) else 'N/A'
+            created_me_str = client_created_me.strftime('%d/%m/%Y') if pd.notna(client_created_me) else 'N/A'
+            
+            # Exibir informações do cliente
+            st.markdown(f"""
+                <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px;'>
+                    <h3 style='color: #1e293b; margin-bottom: 15px;'>👤 Informações do Cliente</h3>
+                    <div style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;'>
+                        <div>
+                            <h4 style='color: #1e293b; margin-bottom: 10px;'>Dados Básicos</h4>
+                            <ul style='color: #475569; line-height: 1.6;'>
+                                <li><strong>ID do Cliente:</strong> {client_id}</li>
+                                <li><strong>Nome:</strong> {client_name}</li>
+                                <li><strong>Idade:</strong> {client_age} anos</li>
+                                <li><strong>Status da Conta:</strong> <span style='{status_color}'>{client_status}</span></li>
+                                <li><strong>Tipo:</strong> {client_role}</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 style='color: #1e293b; margin-bottom: 10px;'>Datas de Cadastro</h4>
+                            <ul style='color: #475569; line-height: 1.6;'>
+                                <li><strong>Cardholder:</strong> {created_ch_str}</li>
+                                <li><strong>Merchant:</strong> {created_me_str}</li>
+                                <li><strong>Data da Consulta:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 style='color: #1e293b; margin-bottom: 10px;'>Informações Adicionais</h4>
+                            <ul style='color: #475569; line-height: 1.6;'>
+                                <li><strong>Categoria do Negócio:</strong> {client_business}</li>
+                                <li><strong>Documento:</strong> {client_document}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        except KeyError as e:
+            st.error(f"Erro ao processar dados do cliente: Campo {str(e)} não encontrado no resultado da consulta.")
+        except Exception as e:
+            st.error(f"Erro ao processar dados do cliente: {str(e)}")
     else:
         st.warning("Nenhum dado de cliente foi retornado. Verifique o ID do cliente e tente novamente.")
 
@@ -926,110 +976,117 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     else:
         st.error("Nenhum dado retornado da consulta Pix. ❌")
         
-    # Executar consulta de transações de cartões
-    try:
-        query_card_transactions = sql_manager.get_card_transactions_sql(id_client)
-        query_job_card = client.query(query_card_transactions)
-        df_card_transactions = query_job_card.result().to_dataframe()
-        st.success("Consulta Transações de Cartões concluída com sucesso! ✅")
-    except Exception as e:
-        st.error(f"Erro na consulta de transações de cartões: {e}")
-        df_card_transactions = None
-    
-    if df_card_transactions is not None and not df_card_transactions.empty:
-        # Renomear colunas para português
-        df_card_transactions.rename(columns={
-            "card_holder_name": "Nome do Portador",
-            "Total_Aprovado": "Total Aprovado",
-            "Total_Aprovado_Atipico": "Total Aprovado Atípico"
-        }, inplace=True)
-        df_card_transactions["Total Aprovado"] = df_card_transactions["Total Aprovado"].apply(format_brl)
-        df_card_transactions["Total Aprovado Atípico"] = df_card_transactions["Total Aprovado Atípico"].apply(format_brl)
-        st.markdown("""
-            <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                <h3 style='color: #1e293b; margin-bottom: 15px;'>📱⭕️ Transações de Cartões</h3>
-        """, unsafe_allow_html=True)
-        
-        # Criar métricas resumidas
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            total_aprovado = df_card_transactions['Total Aprovado'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float).sum()
-            st.metric(
-                label="Total Aprovado",
-                value=format_brl(total_aprovado),
-                delta=None
-            )
-        
-        with col2:
-            total_atipico = df_card_transactions['Total Aprovado Atípico'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float).sum()
-            st.metric(
-                label="Total Aprovado Atípico",
-                value=format_brl(total_atipico),
-                delta=None
-            )
-        
-        with col3:
-            percentual_atipico = (total_atipico / total_aprovado * 100) if total_aprovado > 0 else 0
-            st.metric(
-                label="Percentual Atípico",
-                value=format_percent(percentual_atipico),
-                delta=None
-            )
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        # Exibir tabela de transações
-        st.dataframe(df_card_transactions, use_container_width=True)
+    # Consulta transações de cartões
+    if "Acquiring" in selected_options:
+        try:
+            query_card = sql_manager.get_card_transactions_sql(id_client)
+            query_job_card = client.query(query_card)
+            df_card_transactions = query_job_card.result().to_dataframe()
+            
+            if df_card_transactions is not None and not df_card_transactions.empty:
+                # Renomear colunas para português
+                df_card_transactions.rename(columns={
+                    "card_holder_name": "Nome do Portador",
+                    "capture_method": "Método de Captura",
+                    "Total_Aprovado": "Total Aprovado",
+                    "Qtd_Cartoes": "Qtd. Cartões",
+                    "Qtd_Transacoes": "Qtd. Transações",
+                    "Total_Aprovado_Atipico": "Total em Horário Atípico",
+                    "Percentual_TPV": "% do TPV"
+                }, inplace=True)
+                
+                # Formatar valores monetários
+                df_card_transactions["Total Aprovado"] = df_card_transactions["Total Aprovado"].apply(format_brl)
+                df_card_transactions["Total em Horário Atípico"] = df_card_transactions["Total em Horário Atípico"].apply(format_brl)
+                
+                # Formatar percentual do TPV
+                if "Percentual_TPV" in df_card_transactions.columns:
+                    df_card_transactions["% do TPV"] = df_card_transactions["Percentual_TPV"].apply(
+                        lambda x: f"{float(x):.2f}%" if pd.notna(x) and str(x).strip() != '' else "0.00%"
+                    )
+                
+                st.markdown("""
+                    <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💳 Transações de Cartão</h3>
+                """, unsafe_allow_html=True)
+                
+                # Calcular métricas resumidas
+                total_aprovado = sum([convert_brl_to_float(v) for v in df_card_transactions["Total Aprovado"]])
+                total_atipico = sum([convert_brl_to_float(v) for v in df_card_transactions["Total em Horário Atípico"]])
+                qtd_portadores = len(df_card_transactions["Nome do Portador"].unique())
+                perc_atipico = (total_atipico / total_aprovado * 100) if total_aprovado > 0 else 0
+                
+                # Exibir métricas resumidas usando st.metric
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric(
+                        "Total Aprovado",
+                        format_brl(total_aprovado),
+                        delta=None
+                    )
+                
+                with col2:
+                    st.metric(
+                        "Total em Horário Atípico",
+                        format_brl(total_atipico),
+                        delta=None
+                    )
+                
+                with col3:
+                    st.metric(
+                        "Quantidade de Portadores",
+                        f"{qtd_portadores}",
+                        delta=None
+                    )
+                
+                with col4:
+                    st.metric(
+                        "% em Horário Atípico",
+                        f"{perc_atipico:.2f}%",
+                        delta=None
+                    )
+                
+                st.dataframe(
+                    df_card_transactions,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("""
+                    <h3 style='color: #1e293b; margin-bottom: 15px;'>📊 Transações por Método de Captura</h3>
+                """, unsafe_allow_html=True)
+                
+                # Criar DataFrame agrupado por método de captura
+                df_by_method = df_card_transactions.groupby('Método de Captura').agg({
+                    'Total Aprovado': lambda x: sum([convert_brl_to_float(v) for v in x]),
+                    'Total em Horário Atípico': lambda x: sum([convert_brl_to_float(v) for v in x])
+                }).reset_index()
+                
+                # Formatar valores do DataFrame agrupado
+                df_by_method['Total Aprovado'] = df_by_method['Total Aprovado'].apply(format_brl)
+                df_by_method['Total em Horário Atípico'] = df_by_method['Total em Horário Atípico'].apply(format_brl)
+                
+                # Calcular percentual de transações atípicas
+                df_by_method['% Transações Atípicas'] = (
+                    df_by_method['Total em Horário Atípico'].apply(convert_brl_to_float) / 
+                    df_by_method['Total Aprovado'].apply(convert_brl_to_float) * 100
+                ).round(2).astype(str) + '%'
+                
+                st.dataframe(
+                    df_by_method,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.warning("Nenhuma transação de cartão encontrada.")
+                
+            st.success("Análise de transações de cartões concluída com sucesso! ✅")
+        except Exception as e:
+            st.error(f"Erro na consulta de transações de cartões: {str(e)}")
 
-        # Resumo sintético por método de captura
-        st.markdown("""
-            <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                <h3 style='color: #1e293b; margin-bottom: 15px;'>📊 Resumo por Método de Captura</h3>
-        """, unsafe_allow_html=True)
-
-        # Converter valores para numérico para cálculos
-        df_card_transactions['Total Aprovado (num)'] = df_card_transactions['Total Aprovado'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float)
-        df_card_transactions['Total Aprovado Atípico (num)'] = df_card_transactions['Total Aprovado Atípico'].str.replace('R$ ', '').str.replace('.', '').str.replace(',', '.').astype(float)
-
-        # Agrupar por método de captura
-        resumo_metodo = df_card_transactions.groupby('Met_Cartao').agg({
-            'Total Aprovado (num)': 'sum',
-            'Total Aprovado Atípico (num)': 'sum',
-            'Nome do Portador': 'count'
-        }).reset_index()
-
-        # Renomear colunas
-        resumo_metodo.columns = ['Método de Captura', 'Total Aprovado', 'Total Atípico', 'Quantidade de Cartões']
-
-        # Calcular percentual atípico
-        resumo_metodo['Percentual Atípico'] = (resumo_metodo['Total Atípico'] / resumo_metodo['Total Aprovado'] * 100).round(2)
-
-        # Formatar valores monetários
-        resumo_metodo['Total Aprovado'] = resumo_metodo['Total Aprovado'].apply(format_brl)
-        resumo_metodo['Total Atípico'] = resumo_metodo['Total Atípico'].apply(format_brl)
-        resumo_metodo['Percentual Atípico'] = resumo_metodo['Percentual Atípico'].apply(lambda x: f"{x:.2f}%")
-
-        # Ordenar por total aprovado
-        resumo_metodo = resumo_metodo.sort_values('Total Aprovado', ascending=False)
-
-        # Exibir tabela resumo
-        st.dataframe(
-            resumo_metodo,
-            column_config={
-                "Método de Captura": "Método de Captura",
-                "Total Aprovado": "Total Aprovado",
-                "Total Atípico": "Total Atípico",
-                "Quantidade de Cartões": "Qtd. Cartões",
-                "Percentual Atípico": "% Atípico"
-            },
-            hide_index=True
-        )
-
-        st.markdown("</div>", unsafe_allow_html=True)
-    else:
-        st.warning("Não há informações sobre Transações de Cartões.")
-    
     # Executar consulta de informações de contato
     try:
         query_contact_info = sql_manager.get_contact_info_sql(id_client)
@@ -1105,7 +1162,7 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
                 hide_index=True
             )
     else:
-        st.warning("Nenhuma informação de contato encontrada para este cliente.")
+        st.warning("Nenhuma informação de contato bloqueado encontrada para este cliente.")
     
     # Consulta PEP
     if "PEP" in selected_options:
@@ -1252,34 +1309,58 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
             st.error(f"Erro ao executar a consulta Issuing: {e}")
             df_issuing = None
     
-    # Consulta Acquiring
-    if "Acquiring" in selected_options:
+    # Consulta transações internacionais
+    if "Internacionais" in selected_options:
         try:
-            query_acquiring = sql_manager.get_acquiring_sql(id_client)
-            query_job_acquiring = client.query(query_acquiring)
-            df_acquiring = query_job_acquiring.result().to_dataframe()
+            query_international = sql_manager.get_international_transactions_sql(id_client)
+            query_job_international = client.query(query_international)
+            df_international = query_job_international.result().to_dataframe()
             
-            if not df_acquiring.empty:
+            if df_international is not None and not df_international.empty:
+                # Renomear colunas para português
+                df_international.rename(columns={
+                    "merchant_id": "ID do Cliente",
+                    "id": "ID da Transação",
+                    "created_at": "Data da Transação",
+                    "amount": "Valor",
+                    "card_holder_name": "Nome do Portador",
+                    "card_number": "Número do Cartão",
+                    "card_token_id": "Token do Cartão",
+                    "issuer_id": "ID do Emissor",
+                    "legal_name": "Nome do Emissor",
+                    "Country_Name": "País",
+                    "capture_method": "Método de Captura"
+                }, inplace=True)
+                
+                # Formatar valores monetários
+                df_international["Valor"] = df_international["Valor"].apply(format_brl)
+                
+                # Mascarar número do cartão
+                df_international["Número do Cartão"] = df_international["Número do Cartão"].apply(
+                    lambda x: f"{str(x)[:6]}******{str(x)[-4:]}" if pd.notna(x) else "N/A"
+                )
+                
+                # Formatar data
+                df_international["Data da Transação"] = pd.to_datetime(df_international["Data da Transação"]).dt.strftime('%d/%m/%Y %H:%M:%S')
+                
                 st.markdown("""
                     <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 20px 0;'>
-                        <h3 style='color: #1e293b; margin-bottom: 15px;'>💳 Transações Acquiring</h3>
+                        <h3 style='color: #1e293b; margin-bottom: 15px;'>🌍 Transações Internacionais</h3>
                 """, unsafe_allow_html=True)
                 
-                # Exibir tabela com estilo personalizado
                 st.dataframe(
-                    df_acquiring,
+                    df_international,
                     use_container_width=True,
                     hide_index=True
                 )
                 
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
-                st.warning("Nenhuma transação Acquiring encontrada para este cliente.")
+                st.warning("Nenhuma transação internacional encontrada.")
                 
-            st.success("Consulta Acquiring concluída com sucesso! ✅")
+            st.success("Análise de transações internacionais concluída com sucesso! ✅")
         except Exception as e:
-            st.error(f"Erro ao executar a consulta Acquiring: {e}")
-            df_acquiring = None
+            st.error(f"Erro na consulta de transações internacionais: {str(e)}")
     
     # Marcar a análise como concluída
     st.session_state.analysis_done = True

@@ -12,7 +12,8 @@ WITH cardholder_data AS (
 )
 SELECT
   card_holder_name,
+  capture_method,
   SUM(total_approved_by_ch) AS Total_Aprovado,
   SUM(total_approved_by_ch_atypical_hours) AS Total_Aprovado_Atipico
 FROM cardholder_data
-GROUP BY 1 
+GROUP BY 1,2
