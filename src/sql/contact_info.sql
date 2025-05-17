@@ -6,7 +6,7 @@ c.raw_phone_number AS raw_phone_number,
 u.status AS status,
 u.status_reason
 FROM
-`ai-services-sae.tyrell_euler.scd_raw__contacts` c
+`infinitepay-production.scd_domains.user_contacts` c
 LEFT JOIN
 infinitepay-production.external_sources.phonecast p ON p.phone_number = `infinitepay-production.udfs.phone_number_norm`(raw_phone_number)
 LEFT JOIN

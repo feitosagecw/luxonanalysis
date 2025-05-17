@@ -9,3 +9,5 @@ source venv/bin/activate && python3 -m pip install -r requirements.txt
 Autenticação com o Google Quando
 
 gcloud auth application-default login
+
+Digite (./lux.sh) ou (python lux.py) para inciar 
