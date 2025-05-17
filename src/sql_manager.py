@@ -67,4 +67,8 @@ class SQLManager:
     
     def get_international_transactions_sql(self, id_client):
         """Retorna a consulta SQL para transações internacionais."""
-        return self.read_sql_file('international_transactions.sql').format(id_client=id_client) 
+        return self.read_sql_file('international_transactions.sql').format(id_client=id_client)
+    
+    def get_offense_analysis_sql(self, id_client):
+        """Retorna a consulta SQL para análise de ofensas com o ID do cliente substituído."""
+        return self.read_sql_file('offense_analysis.sql').format(id_client=id_client) 

@@ -2,8 +2,10 @@ SELECT
         DISTINCT
         a.id AS id_cliente,
         e.name Nome,
+        a.email,
         SAFE_CAST(DATE_DIFF(CURRENT_DATE(),SAFE.PARSE_DATE('%d/%m/%Y', COALESCE(b.birthday, e.birthday)),DAY) / 365.26 AS INT)AS idade,
         a.status,
+        a.status_reason,
         CASE
             WHEN b.document_type = "cnpj" THEN "Merchant Pessoa Jurídica"
             WHEN b.document_type = "cpf" THEN "Merchant Pessoa Física"

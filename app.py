@@ -11,10 +11,12 @@ from pathlib import Path
 import os
 from src.sql_manager import SQLManager
 import gc
-from stqdm import stqdm
 
 # Inicializar o gerenciador de SQL
 sql_manager = SQLManager()
+
+# Definir o project_id do BigQuery
+project_id = "infinitepay-production"
 
 # Configuração da página
 st.set_page_config(
@@ -398,6 +400,242 @@ st.markdown("""
     .stMultiSelect [data-baseweb="tag"] button {
         color: white !important;
     }
+
+    /* Estilo para o conteúdo principal */
+    .main .block-container {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        color: #1e293b;
+    }
+
+    /* Estilo para títulos */
+    .main h1, .main h2, .main h3, .main h4 {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 1rem;
+        letter-spacing: -0.025em;
+    }
+
+    .main h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+
+    .main h2 {
+        font-size: 2rem;
+        font-weight: 600;
+    }
+
+    .main h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .main h4 {
+        font-size: 1.25rem;
+        font-weight: 500;
+    }
+
+    /* Estilo para parágrafos */
+    .main p {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: #334155;
+        margin-bottom: 1rem;
+    }
+
+    /* Estilo para tabelas */
+    .main .dataframe {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    .main .dataframe th {
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .main .dataframe td {
+        font-size: 0.95rem;
+        color: #334155;
+    }
+
+    /* Estilo para métricas */
+    .main .stMetric {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .main .stMetric label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #475569;
+    }
+
+    .main .stMetric div {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    /* Estilo para alertas e mensagens */
+    .main .stAlert {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    /* Estilo para gráficos */
+    .main .js-plotly-plot {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* Estilo para cards e containers */
+    .main .stMarkdown > div {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* Estilo para listas */
+    .main ul, .main ol {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: #334155;
+        margin-bottom: 1rem;
+    }
+
+    .main li {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Estilo para links */
+    .main a {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .main a:hover {
+        text-decoration: underline;
+    }
+
+    /* Estilo para código */
+    .main code {
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 0.9rem;
+        background-color: #f1f5f9;
+        padding: 0.2em 0.4em;
+        border-radius: 4px;
+    }
+
+    /* Estilo para blocos de código */
+    .main pre {
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        background-color: #f8fafc;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    /* Estilo para tooltips */
+    .main .tooltip {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.9rem;
+    }
+
+    /* Estilo para botões */
+    .main .stButton > button {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 500;
+        font-size: 0.95rem;
+    }
+
+    /* Estilo para inputs */
+    .main .stTextInput > div > div > input {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.95rem;
+    }
+
+    /* Estilo para selects */
+    .main .stSelectbox > div > div > select {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.95rem;
+    }
+
+    /* Estilo para checkboxes */
+    .main .stCheckbox > div > label {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.95rem;
+    }
+
+    /* Estilo para radio buttons */
+    .main .stRadio > div > label {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.95rem;
+    }
+
+    /* Estilo para expanders */
+    .main .streamlit-expanderHeader {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 500;
+        font-size: 1rem;
+    }
+
+    /* Estilo para dividers */
+    .main .stDivider {
+        margin: 2rem 0;
+    }
+
+    /* Estilo para progress bars */
+    .main .stProgress > div > div {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* Estilo para multiselect */
+    .main .stMultiSelect > div > div > div {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.95rem;
+    }
+
+    /* Estilo para tooltips de gráficos */
+    .main .plotly-graph-div .hovertext {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.9rem;
+    }
+
+    /* Estilo para legendas de gráficos */
+    .main .plotly-graph-div .legend {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.9rem;
+    }
+
+    /* Estilo para eixos de gráficos */
+    .main .plotly-graph-div .xtitle, .main .plotly-graph-div .ytitle {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    /* Estilo para tooltips de gráficos */
+    .main .plotly-graph-div .hovertext {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.9rem;
+    }
+
+    /* Estilo para tooltips de gráficos */
+    .main .plotly-graph-div .hovertext {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.9rem;
+    }
+
+    /* Estilo para tooltips de gráficos */
+    .main .plotly-graph-div .hovertext {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 0.9rem;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -629,9 +867,9 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
     id_client = st.session_state.id_client
     st.info(f"Iniciando análise para o cliente: {id_client} 🔎")
     
-    # Barra de progresso com stqdm
-    for _ in stqdm(range(100), desc="Realizando análise", mininterval=0.1):
-        time.sleep(0.05)
+    # Substituir a barra de progresso pelo spinner
+    with st.spinner("Analisando dados...", show_time=True):
+        time.sleep(5)
             
     # Conectar ao BigQuery
     creds, _ = default()
@@ -652,6 +890,7 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
             # Extrair informações do cliente
             client_id = df_user.iloc[0]['id_cliente']
             client_name = df_user.iloc[0]['Nome']
+            client_email = df_user.iloc[0]['email']
             client_age = df_user.iloc[0]['idade']
             client_status = df_user.iloc[0]['status']
             client_role = df_user.iloc[0]['Role_Type']
@@ -659,6 +898,9 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
             client_document = df_user.iloc[0]['document_number']
             client_created_ch = df_user.iloc[0]['created_at_ch']
             client_created_me = df_user.iloc[0]['created_at_me']
+            client_segment = df_user.iloc[0].get('segment', 'N/A')
+            client_risk_level = df_user.iloc[0].get('risk_level', 'N/A')
+            client_origin = df_user.iloc[0].get('origin', 'N/A')
             
             # Definir a cor do status baseado no valor
             status_color = "color: #dc2626;" if client_status.lower() == "blocked" else "color: #475569;"
@@ -671,35 +913,86 @@ if 'should_analyze' in st.session_state and st.session_state.should_analyze:
             st.markdown(f"""
                 <div style='background-color: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px;'>
                     <h3 style='color: #1e293b; margin-bottom: 15px;'>👤 Informações do Cliente</h3>
-                    <div style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;'>
+                    <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;'>
                         <div>
                             <h4 style='color: #1e293b; margin-bottom: 10px;'>Dados Básicos</h4>
                             <ul style='color: #475569; line-height: 1.6;'>
                                 <li><strong>ID do Cliente:</strong> {client_id}</li>
                                 <li><strong>Nome:</strong> {client_name}</li>
+                                <li><strong>Email:</strong> {client_email} <a href="https://app.intercom.com/a/inbox/cq9sxxvy/inbox/search?query={client_email}" target="_blank" style="color: #2563eb; text-decoration: none; margin-left: 5px;">🔍 Intercom</a></li>
                                 <li><strong>Idade:</strong> {client_age} anos</li>
-                                <li><strong>Status da Conta:</strong> <span style='{status_color}'>{client_status}</span></li>
-                                <li><strong>Tipo:</strong> {client_role}</li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 style='color: #1e293b; margin-bottom: 10px;'>Datas de Cadastro</h4>
-                            <ul style='color: #475569; line-height: 1.6;'>
-                                <li><strong>Cardholder:</strong> {created_ch_str}</li>
-                                <li><strong>Merchant:</strong> {created_me_str}</li>
-                                <li><strong>Data da Consulta:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</li>
+                                <li><strong>Status:</strong> <span style='{status_color}'>{client_status}</span></li>
+                                <li><strong>Motivo do Status:</strong> {df_user.iloc[0]['status_reason']}</li>
                             </ul>
                         </div>
                         <div>
                             <h4 style='color: #1e293b; margin-bottom: 10px;'>Informações Adicionais</h4>
                             <ul style='color: #475569; line-height: 1.6;'>
+                                <li><strong>Tipo:</strong> {client_role}</li>
                                 <li><strong>Categoria do Negócio:</strong> {client_business}</li>
                                 <li><strong>Documento:</strong> {client_document}</li>
+                                <li><strong>Data de Cadastro Cardholder:</strong> {created_ch_str}</li>
+                                <li><strong>Data de Cadastro Merchant:</strong> {created_me_str}</li>
                             </ul>
                         </div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
+            
+            # Seção de Análise de Ofensas
+            st.markdown("### 🚨 Análise de Ofensas")
+
+            # Executar consulta de análise de ofensas
+            offense_query = sql_manager.get_offense_analysis_sql(id_client=client_id)
+            df_offense = pd.read_gbq(offense_query, project_id=project_id)
+
+            if not df_offense.empty:
+                # Converter a data para datetime e ordenar
+                df_offense['Data_Offense'] = pd.to_datetime(df_offense['Data_Offense'], dayfirst=True)
+                df_offense = df_offense.sort_values('Data_Offense', ascending=False)
+                
+                # Verificar se existe alguma ofensa normalizada
+                ofensas_normais = df_offense[df_offense['conclusion'].str.lower() == 'normal']
+                if not ofensas_normais.empty:
+                    ultima_normal = ofensas_normais.iloc[0]  # Já está ordenado por data desc
+                    data_formatada = pd.to_datetime(ultima_normal['Data_Offense']).strftime('%d/%m/%Y')
+                    st.warning(f"⚠️ Este cliente já possui uma ofensa normalizada pelo analista {ultima_normal['analyst']} em {data_formatada}")
+                
+                # Criar métricas resumidas
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Total de Ofensas", len(df_offense))
+                
+                with col2:
+                    st.metric("Última Análise", df_offense['Data_Offense'].iloc[0].strftime('%d/%m/%Y'))
+                
+                with col3:
+                    st.metric("Analista", df_offense['analyst'].iloc[0])
+                
+                with col4:
+                    st.metric("Tipo de Análise", df_offense['name'].iloc[0])
+                
+                # Exibir tabela com todas as ofensas
+                st.markdown("#### Histórico de Ofensas")
+                
+                # Formatar a data para exibição no dataset
+                df_offense['Data_Offense'] = df_offense['Data_Offense'].dt.strftime('%Y-%m-%d')
+                
+                st.dataframe(
+                    df_offense,
+                    column_config={
+                        "Data_Offense": "Data da Ofensa",
+                        "conclusion": "Conclusão",
+                        "priority": "Prioridade",
+                        "description": "Descrição",
+                        "analyst": "Analista",
+                        "name": "Tipo de Análise"
+                    },
+                    hide_index=True
+                )
+            else:
+                st.warning("Nenhuma ofensa encontrada para este cliente.")
             
         except KeyError as e:
             st.error(f"Erro ao processar dados do cliente: Campo {str(e)} não encontrado no resultado da consulta.")
